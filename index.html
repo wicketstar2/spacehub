@@ -69,9 +69,6 @@
 </div>
 
 <script>
-// Global variable to store the currently logged-in user
-let currentUser = null;
-
 // Account Management
 function login() {
     const username = document.getElementById('username').value.trim();
@@ -81,7 +78,6 @@ function login() {
     const account = accounts.find(acc => acc.username === username && acc.password === password);
 
     if (account) {
-        currentUser = username; // Set the current user
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('home-section').style.display = 'block';
         loadSavedLinks();
@@ -109,7 +105,6 @@ function createAccount() {
         } else {
             accounts.push({ username: newUsername, password: newPassword });
             localStorage.setItem('accounts', JSON.stringify(accounts));
-            localStorage.setItem(newUsername, JSON.stringify({ links: [], passwords: [], events: [] })); // Initialize user-specific data
             document.getElementById('create-account-form').style.display = 'none';
             alert('Account created successfully!');
         }
@@ -127,22 +122,9 @@ function showSection(section) {
     });
 }
 
-// User Data Management
-function getUserData() {
-    if (!currentUser) return null;
-    return JSON.parse(localStorage.getItem(currentUser)) || { links: [], passwords: [], events: [] };
-}
-
-function saveUserData(data) {
-    if (currentUser) {
-        localStorage.setItem(currentUser, JSON.stringify(data));
-    }
-}
-
 // Links Management
 function loadSavedLinks() {
-    const userData = getUserData();
-    const links = userData.links || [];
+    const links = JSON.parse(localStorage.getItem('savedLinks')) || [];
     const linksList = document.getElementById('links-list');
     linksList.innerHTML = '';
     links.forEach((link, index) => {
@@ -157,25 +139,24 @@ function loadSavedLinks() {
 function addLink() {
     const link = document.getElementById('link-input').value.trim();
     if (link) {
-        const userData = getUserData();
-        userData.links.push(link);
-        saveUserData(userData);
+        const links = JSON.parse(localStorage.getItem('savedLinks')) || [];
+        links.push(link);
+        localStorage.setItem('savedLinks', JSON.stringify(links));
         loadSavedLinks();
         document.getElementById('link-input').value = '';
     }
 }
 
 function deleteLink(index) {
-    const userData = getUserData();
-    userData.links.splice(index, 1);
-    saveUserData(userData);
+    const links = JSON.parse(localStorage.getItem('savedLinks')) || [];
+    links.splice(index, 1);
+    localStorage.setItem('savedLinks', JSON.stringify(links));
     loadSavedLinks();
 }
 
 // Passwords Management
 function loadSavedPasswords() {
-    const userData = getUserData();
-    const passwords = userData.passwords || [];
+    const passwords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
     const passwordsList = document.getElementById('passwords-list');
     passwordsList.innerHTML = '';
     passwords.forEach((item, index) => {
@@ -190,9 +171,9 @@ function addPassword() {
     const app = document.getElementById('password-app').value.trim();
     const password = document.getElementById('password-input').value.trim();
     if (app && password) {
-        const userData = getUserData();
-        userData.passwords.push({ app, password });
-        saveUserData(userData);
+        const passwords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
+        passwords.push({ app, password });
+        localStorage.setItem('savedPasswords', JSON.stringify(passwords));
         loadSavedPasswords();
         document.getElementById('password-app').value = '';
         document.getElementById('password-input').value = '';
@@ -200,16 +181,15 @@ function addPassword() {
 }
 
 function deletePassword(index) {
-    const userData = getUserData();
-    userData.passwords.splice(index, 1);
-    saveUserData(userData);
+    const passwords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
+    passwords.splice(index, 1);
+    localStorage.setItem('savedPasswords', JSON.stringify(passwords));
     loadSavedPasswords();
 }
 
 // Events Management
 function loadSavedEvents() {
-    const userData = getUserData();
-    const events = userData.events || [];
+    const events = JSON.parse(localStorage.getItem('savedEvents')) || [];
     const eventsList = document.getElementById('events-list');
     eventsList.innerHTML = '';
     events.forEach((event, index) => {
@@ -224,9 +204,9 @@ function addEvent() {
     const eventInput = document.getElementById('event-input').value.trim();
     const eventDate = document.getElementById('event-date').value.trim();
     if (eventInput && eventDate) {
-        const userData = getUserData();
-        userData.events.push({ name: eventInput, date: eventDate });
-        saveUserData(userData);
+        const events = JSON.parse(localStorage.getItem('savedEvents')) || [];
+        events.push({ name: eventInput, date: eventDate });
+        localStorage.setItem('savedEvents', JSON.stringify(events));
         loadSavedEvents();
         document.getElementById('event-input').value = '';
         document.getElementById('event-date').value = '';
@@ -234,9 +214,9 @@ function addEvent() {
 }
 
 function deleteEvent(index) {
-    const userData = getUserData();
-    userData.events.splice(index, 1);
-    saveUserData(userData);
+    const events = JSON.parse(localStorage.getItem('savedEvents')) || [];
+    events.splice(index, 1);
+    localStorage.setItem('savedEvents', JSON.stringify(events));
     loadSavedEvents();
 }
 </script>
