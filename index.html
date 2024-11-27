@@ -7,13 +7,8 @@
     <link rel="icon" type="image/png" href="https://fiverr-res.cloudinary.com/image/upload/f_png,q_auto,t_makers_project_variation_preview/v1/secured-attachments/makers_project_variation/preview_file/8cef1190b19c6094e8c6e12490618641-1720427001/668b9ed5742dc6450ca6731a.svg?__cld_token__=exp=1732246613~hmac=d0be7fecfcb0b65fff83ebdb6af4530b43b8285692720b89273fd0729a2838f6">
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-    
 </head>
 <body>
-
-
-    
-
 
 <!-- Login Section -->
 <div id="login-section">
@@ -24,73 +19,64 @@
     <input type="password" id="password" placeholder="Enter your password">
     <button onclick="login()">Login</button>
     <p id="login-error" style="color: red; display: none;">Invalid credentials. Please try again.</p>
+
+    <!-- Create Username and Password Dropdown -->
+    <div>
+        <button onclick="showCreateAccountForm()">Create a new username and password</button>
+        <div id="create-account-form" style="display: none;">
+            <label for="new-username">New Username:</label>
+            <input type="text" id="new-username" placeholder="Create a username">
+            <label for="new-password">New Password:</label>
+            <input type="password" id="new-password" placeholder="Create a password">
+            <button onclick="createAccount()">Create Account</button>
+            <p id="account-error" style="color: red; display: none;">Please fill in both fields.</p>
+        </div>
+    </div>
 </div>
 
 <!-- Home Section (After login) -->
-<div id="home-section">
+<div id="home-section" style="display: none;">
     <h2>Welcome to Space Hub</h2>
     <button onclick="showSection('event-planner')">Event Planner</button>
     <button onclick="showSection('links-section')">Saved Links</button>
     <button onclick="showSection('passwords-section')">Password Saver</button>
-</div>
-
-<!-- Links Section -->
-<div id="links-section">
-    <h3>Saved Links</h3>
-    <label for="addLinkInput">Add a new link:</label>
-    <input type="url" id="addLinkInput" placeholder="Enter the link to save">
-    <button onclick="saveLink()">Save Link</button>
-
-    <div id="saved-links">
-        <h4>Saved Links:</h4>
-        <!-- Saved links will appear here -->
+    <div id="event-planner" style="display: none;">
+        <h3>Saved Events</h3>
+        <input type="text" id="event-input" placeholder="Add a new event">
+        <input type="date" id="event-date">
+        <button onclick="addEvent()">Add Event</button>
+        <ul id="events-list"></ul>
     </div>
-</div>
-
-<!-- Event Planner Section -->
-<div id="event-planner">
-    <h3>Event Planner</h3>
-    <label for="eventTitle">Event Title:</label>
-    <input type="text" id="eventTitle" placeholder="Enter event title">
-    <label for="eventDate">Event Date:</label>
-    <input type="date" id="eventDate">
-    <button onclick="addEvent()">Add Event</button>
-    <div class="boxes">
-        <u>Upcoming Events:</u>
-        <ul id="eventList"></ul>
+    <div id="links-section" style="display: none;">
+        <h3>Saved Links</h3>
+        <input type="text" id="link-input" placeholder="Add a new link">
+        <button onclick="addLink()">Add Link</button>
+        <ul id="links-list"></ul>
     </div>
-</div>
-
-<!-- Password Saver Section -->
-<div id="passwords-section">
-    <h3>Password Saver</h3>
-    <label for="websiteName">Website Name:</label>
-    <input type="text" id="websiteName" placeholder="Enter the website name">
-    <label for="passwordInput">Password:</label>
-    <input type="text" id="passwordInput" placeholder="Enter the password">
-    <button onclick="savePassword()">Save Password</button>
-    <div class="boxes">
-        <u>Saved Passwords:</u>
-        <ul id="passwordList"></ul>
+    <div id="passwords-section" style="display: none;">
+        <h3>Saved Passwords</h3>
+        <input type="text" id="password-app" placeholder="Website or App Name">
+        <input type="password" id="password-input" placeholder="Add a new password">
+        <button onclick="addPassword()">Add Password</button>
+        <ul id="passwords-list"></ul>
     </div>
 </div>
 
 <script>
-// Valid credentials for login
-const VALID_USERNAME = 'hi';
-const VALID_PASSWORD = 'hi';
-
 // Function to login
 function login() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
 
-    if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+    const accounts = JSON.parse(localStorage.getItem('accounts')) || [];
+    const account = accounts.find(acc => acc.username === username && acc.password === password);
+
+    if (account) {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('home-section').style.display = 'block';
         loadSavedLinks(); // Load saved links after successful login
         loadSavedPasswords(); // Load saved passwords
-        displayEvents(); // Load saved events
+        loadSavedEvents(); // Load saved events
     } else {
         const errorElement = document.getElementById('login-error');
         errorElement.style.display = 'block';
@@ -98,150 +84,168 @@ function login() {
     }
 }
 
-// Show specific section
-function showSection(sectionId) {
-    document.getElementById('event-planner').style.display = 'none';
-    document.getElementById('links-section').style.display = 'none';
-    document.getElementById('passwords-section').style.display = 'none';
-    document.getElementById(sectionId).style.display = 'block';
+// Function to show the create account form
+function showCreateAccountForm() {
+    document.getElementById('create-account-form').style.display = 'block';
 }
 
-// Function to save a new link
-function saveLink() {
-    const linkInput = document.getElementById('addLinkInput');
-    let newLink = linkInput.value.trim();
+// Function to create a new username and password
+function createAccount() {
+    const newUsername = document.getElementById('new-username').value.trim();
+    const newPassword = document.getElementById('new-password').value.trim();
 
-    // Check if the link starts with 'http://' or 'https://', if not, add 'http://'
-    if (newLink && !/^https?:\/\//i.test(newLink)) {
-        newLink = 'http://' + newLink; // Prepend 'http://' if not present
+    if (newUsername && newPassword) {
+        const accounts = JSON.parse(localStorage.getItem('accounts')) || [];
+        // Check if the username already exists
+        if (accounts.some(acc => acc.username === newUsername)) {
+            alert('Username already exists. Please choose a different one.');
+        } else {
+            accounts.push({ username: newUsername, password: newPassword });
+            localStorage.setItem('accounts', JSON.stringify(accounts));
+
+            // Hide the create account form after saving
+            document.getElementById('create-account-form').style.display = 'none';
+            alert('Account created successfully!');
+        }
+    } else {
+        const errorElement = document.getElementById('account-error');
+        errorElement.style.display = 'block';
+        errorElement.textContent = 'Please fill in both fields.';
     }
-
-    if (newLink) {
-        const savedLinks = JSON.parse(localStorage.getItem('savedLinks')) || [];
-        savedLinks.push(newLink);
-        localStorage.setItem('savedLinks', JSON.stringify(savedLinks));
-        linkInput.value = ''; // Clear the input field
-        displaySavedLinks(); // Update the display of saved links
-    }
 }
 
-// Function to delete a saved link
-function deleteLink(index) {
-    const savedLinks = JSON.parse(localStorage.getItem('savedLinks')) || [];
-    savedLinks.splice(index, 1);
-    localStorage.setItem('savedLinks', JSON.stringify(savedLinks));
-    displaySavedLinks(); // Update the display after deletion
-}
-
-// Function to display all saved links
-function displaySavedLinks() {
-    const savedLinksDiv = document.getElementById('saved-links');
-    savedLinksDiv.innerHTML = '<h4>Saved Links:</h4>'; // Clear current links
-    const savedLinks = JSON.parse(localStorage.getItem('savedLinks')) || [];
-    
-    savedLinks.forEach((url, index) => {
-        const container = document.createElement('div');
-        const button = document.createElement('button');
-        button.textContent = `Go to ${url}`;
-        button.onclick = () => window.open(url, '_blank');
-        const deleteButton = document.createElement('span');
-        deleteButton.textContent = 'Delete';
-        deleteButton.className = 'delete-btn';
-        deleteButton.onclick = () => deleteLink(index);
-        container.appendChild(button);
-        container.appendChild(deleteButton);
-        savedLinksDiv.appendChild(container);
+// Function to display sections
+function showSection(section) {
+    const sections = ['event-planner', 'links-section', 'passwords-section'];
+    sections.forEach((sec) => {
+        document.getElementById(sec).style.display = (sec === section) ? 'block' : 'none';
     });
 }
 
 // Function to load saved links
 function loadSavedLinks() {
-    displaySavedLinks(); // Call display function to show links on login
+    const links = JSON.parse(localStorage.getItem('savedLinks')) || [];
+    const linksList = document.getElementById('links-list');
+    linksList.innerHTML = '';
+    links.forEach((link, index) => {
+        const li = document.createElement('li');
+        li.textContent = link;
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.onclick = function() {
+            deleteLink(index);
+        };
+        li.appendChild(deleteButton);
+        linksList.appendChild(li);
+    });
 }
 
-// Function to save password
-function savePassword() {
-    const websiteName = document.getElementById('websiteName').value.trim();
-    const password = document.getElementById('passwordInput').value.trim();
+// Function to load saved passwords
+function loadSavedPasswords() {
+    const passwords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
+    const passwordsList = document.getElementById('passwords-list');
+    passwordsList.innerHTML = '';
+    passwords.forEach((password, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${password.app}: ${password.password}`;
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.onclick = function() {
+            deletePassword(index);
+        };
+        li.appendChild(deleteButton);
+        passwordsList.appendChild(li);
+    });
+}
 
-    if (websiteName && password) {
-        const passwords = JSON.parse(localStorage.getItem('passwords')) || [];
-        passwords.push({ website: websiteName, password: password });
-        localStorage.setItem('passwords', JSON.stringify(passwords));
-        displaySavedPasswords(); // Update password list
+// Function to load saved events
+function loadSavedEvents() {
+    const events = JSON.parse(localStorage.getItem('savedEvents')) || [];
+    const eventsList = document.getElementById('events-list');
+    eventsList.innerHTML = '';
+    events.forEach((event, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${event.name} on ${event.date}`;
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.onclick = function() {
+            deleteEvent(index);
+        };
+        li.appendChild(deleteButton);
+        eventsList.appendChild(li);
+    });
+}
+
+// Function to add a link
+function addLink() {
+    const linkInput = document.getElementById('link-input');
+    const newLink = linkInput.value.trim();
+    if (newLink) {
+        let savedLinks = JSON.parse(localStorage.getItem('savedLinks')) || [];
+        savedLinks.push(newLink);
+        localStorage.setItem('savedLinks', JSON.stringify(savedLinks));
+        loadSavedLinks(); // Refresh the list
+        linkInput.value = ''; // Clear the input
     }
 }
 
-// Function to delete a saved password
-function deletePassword(index) {
-    const passwords = JSON.parse(localStorage.getItem('passwords')) || [];
-    passwords.splice(index, 1);
-    localStorage.setItem('passwords', JSON.stringify(passwords));
-    displaySavedPasswords(); // Update the password list after deletion
-}
+// Function to add a password
+function addPassword() {
+    const appInput = document.getElementById('password-app');
+    const passwordInput = document.getElementById('password-input');
+    const appName = appInput.value.trim();
+    const password = passwordInput.value.trim();
 
-// Function to display saved passwords
-function displaySavedPasswords() {
-    const passwordList = document.getElementById('passwordList');
-    passwordList.innerHTML = ''; // Clear current list
-    const passwords = JSON.parse(localStorage.getItem('passwords')) || [];
-
-    passwords.forEach(({ website, password }, index) => {
-        const listItem = document.createElement('li');
-        listItem.textContent = `${website}: ${password}`;
-        const deleteButton = document.createElement('span');
-        deleteButton.textContent = 'Delete';
-        deleteButton.className = 'delete-btn';
-        deleteButton.onclick = () => deletePassword(index);
-        listItem.appendChild(deleteButton);
-        passwordList.appendChild(listItem);
-    });
+    if (appName && password) {
+        let savedPasswords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
+        savedPasswords.push({ app: appName, password: password });
+        localStorage.setItem('savedPasswords', JSON.stringify(savedPasswords));
+        loadSavedPasswords(); // Refresh the list
+        appInput.value = ''; // Clear the input
+        passwordInput.value = ''; // Clear the input
+    }
 }
 
 // Function to add an event
 function addEvent() {
-    const eventTitle = document.getElementById('eventTitle').value.trim();
-    const eventDate = document.getElementById('eventDate').value;
+    const eventInput = document.getElementById('event-input');
+    const eventDate = document.getElementById('event-date');
+    const newEvent = eventInput.value.trim();
+    const newDate = eventDate.value;
 
-    if (eventTitle && eventDate) {
-        const events = JSON.parse(localStorage.getItem('events')) || [];
-        events.push({ title: eventTitle, date: eventDate });
-        localStorage.setItem('events', JSON.stringify(events));
-        displayEvents(); // Update event list
+    if (newEvent && newDate) {
+        let savedEvents = JSON.parse(localStorage.getItem('savedEvents')) || [];
+        savedEvents.push({ name: newEvent, date: newDate });
+        localStorage.setItem('savedEvents', JSON.stringify(savedEvents));
+        loadSavedEvents(); // Refresh the list
+        eventInput.value = ''; // Clear the input
+        eventDate.value = ''; // Clear the date
     }
 }
 
-// Function to display events
-function displayEvents() {
-    const eventList = document.getElementById('eventList');
-    eventList.innerHTML = ''; // Clear current events
-    const events = JSON.parse(localStorage.getItem('events')) || [];
+// Function to delete a link
+function deleteLink(index) {
+    let savedLinks = JSON.parse(localStorage.getItem('savedLinks')) || [];
+    savedLinks.splice(index, 1);
+    localStorage.setItem('savedLinks', JSON.stringify(savedLinks));
+    loadSavedLinks(); // Refresh the list
+}
 
-    events.forEach(({ title, date }, index) => {
-        const listItem = document.createElement('li');
-        listItem.textContent = `${title} - ${date}`;
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.onclick = () => deleteEvent(index);
-        listItem.appendChild(deleteButton);
-        eventList.appendChild(listItem);
-    });
+// Function to delete a password
+function deletePassword(index) {
+    let savedPasswords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
+    savedPasswords.splice(index, 1);
+    localStorage.setItem('savedPasswords', JSON.stringify(savedPasswords));
+    loadSavedPasswords(); // Refresh the list
 }
 
 // Function to delete an event
 function deleteEvent(index) {
-    const events = JSON.parse(localStorage.getItem('events')) || [];
-    events.splice(index, 1);
-    localStorage.setItem('events', JSON.stringify(events));
-    displayEvents(); // Update the event list after deletion
+    let savedEvents = JSON.parse(localStorage.getItem('savedEvents')) || [];
+    savedEvents.splice(index, 1);
+    localStorage.setItem('savedEvents', JSON.stringify(savedEvents));
+    loadSavedEvents(); // Refresh the list
 }
-
-// Load saved links on page load
-window.onload = function () {
-    if (document.getElementById('app-section').style.display === 'block') {
-        loadSavedLinks();
-    }
-};
 </script>
 
 </body>
