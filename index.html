@@ -20,7 +20,7 @@
     <button onclick="login()">Login</button>
     <p id="login-error" style="color: red; display: none;">Invalid credentials. Please try again.</p>
 
-    <!-- Create Username and Password Dropdown -->
+    <!-- Create Username and Password -->
     <div>
         <button onclick="showCreateAccountForm()">Create a new username and password</button>
         <div id="create-account-form" style="display: none;">
@@ -34,12 +34,14 @@
     </div>
 </div>
 
-<!-- Home Section (After login) -->
+<!-- Home Section -->
 <div id="home-section" style="display: none;">
     <h2>Welcome to Space Hub</h2>
     <button onclick="showSection('event-planner')">Event Planner</button>
     <button onclick="showSection('links-section')">Saved Links</button>
     <button onclick="showSection('passwords-section')">Password Saver</button>
+    
+    <!-- Event Planner Section -->
     <div id="event-planner" style="display: none;">
         <h3>Saved Events</h3>
         <input type="text" id="event-input" placeholder="Add a new event">
@@ -47,12 +49,16 @@
         <button onclick="addEvent()">Add Event</button>
         <ul id="events-list"></ul>
     </div>
+
+    <!-- Links Section -->
     <div id="links-section" style="display: none;">
         <h3>Saved Links</h3>
         <input type="text" id="link-input" placeholder="Add a new link">
         <button onclick="addLink()">Add Link</button>
         <ul id="links-list"></ul>
     </div>
+
+    <!-- Passwords Section -->
     <div id="passwords-section" style="display: none;">
         <h3>Saved Passwords</h3>
         <input type="text" id="password-app" placeholder="Website or App Name">
@@ -63,7 +69,10 @@
 </div>
 
 <script>
-// Function to login
+// Global variable to store the currently logged-in user
+let currentUser = null;
+
+// Account Management
 function login() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
@@ -72,11 +81,12 @@ function login() {
     const account = accounts.find(acc => acc.username === username && acc.password === password);
 
     if (account) {
+        currentUser = username; // Set the current user
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('home-section').style.display = 'block';
-        loadSavedLinks(); // Load saved links after successful login
-        loadSavedPasswords(); // Load saved passwords
-        loadSavedEvents(); // Load saved events
+        loadSavedLinks();
+        loadSavedPasswords();
+        loadSavedEvents();
     } else {
         const errorElement = document.getElementById('login-error');
         errorElement.style.display = 'block';
@@ -84,26 +94,22 @@ function login() {
     }
 }
 
-// Function to show the create account form
 function showCreateAccountForm() {
     document.getElementById('create-account-form').style.display = 'block';
 }
 
-// Function to create a new username and password
 function createAccount() {
     const newUsername = document.getElementById('new-username').value.trim();
     const newPassword = document.getElementById('new-password').value.trim();
 
     if (newUsername && newPassword) {
         const accounts = JSON.parse(localStorage.getItem('accounts')) || [];
-        // Check if the username already exists
         if (accounts.some(acc => acc.username === newUsername)) {
             alert('Username already exists. Please choose a different one.');
         } else {
             accounts.push({ username: newUsername, password: newPassword });
             localStorage.setItem('accounts', JSON.stringify(accounts));
-
-            // Hide the create account form after saving
+            localStorage.setItem(newUsername, JSON.stringify({ links: [], passwords: [], events: [] })); // Initialize user-specific data
             document.getElementById('create-account-form').style.display = 'none';
             alert('Account created successfully!');
         }
@@ -114,137 +120,124 @@ function createAccount() {
     }
 }
 
-// Function to display sections
+// Section Management
 function showSection(section) {
-    const sections = ['event-planner', 'links-section', 'passwords-section'];
-    sections.forEach((sec) => {
-        document.getElementById(sec).style.display = (sec === section) ? 'block' : 'none';
+    ['event-planner', 'links-section', 'passwords-section'].forEach(sec => {
+        document.getElementById(sec).style.display = sec === section ? 'block' : 'none';
     });
 }
 
-// Function to load saved links
+// User Data Management
+function getUserData() {
+    if (!currentUser) return null;
+    return JSON.parse(localStorage.getItem(currentUser)) || { links: [], passwords: [], events: [] };
+}
+
+function saveUserData(data) {
+    if (currentUser) {
+        localStorage.setItem(currentUser, JSON.stringify(data));
+    }
+}
+
+// Links Management
 function loadSavedLinks() {
-    const links = JSON.parse(localStorage.getItem('savedLinks')) || [];
+    const userData = getUserData();
+    const links = userData.links || [];
     const linksList = document.getElementById('links-list');
     linksList.innerHTML = '';
     links.forEach((link, index) => {
         const li = document.createElement('li');
-        li.textContent = link;
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.onclick = function() {
-            deleteLink(index);
-        };
-        li.appendChild(deleteButton);
+        li.innerHTML = `
+            <a href="${link.startsWith('http') ? link : `https://${link}`}" target="_blank">${link}</a>
+            <button onclick="deleteLink(${index})">Delete</button>`;
         linksList.appendChild(li);
     });
 }
 
-// Function to load saved passwords
+function addLink() {
+    const link = document.getElementById('link-input').value.trim();
+    if (link) {
+        const userData = getUserData();
+        userData.links.push(link);
+        saveUserData(userData);
+        loadSavedLinks();
+        document.getElementById('link-input').value = '';
+    }
+}
+
+function deleteLink(index) {
+    const userData = getUserData();
+    userData.links.splice(index, 1);
+    saveUserData(userData);
+    loadSavedLinks();
+}
+
+// Passwords Management
 function loadSavedPasswords() {
-    const passwords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
+    const userData = getUserData();
+    const passwords = userData.passwords || [];
     const passwordsList = document.getElementById('passwords-list');
     passwordsList.innerHTML = '';
-    passwords.forEach((password, index) => {
+    passwords.forEach((item, index) => {
         const li = document.createElement('li');
-        li.textContent = `${password.app}: ${password.password}`;
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.onclick = function() {
-            deletePassword(index);
-        };
-        li.appendChild(deleteButton);
+        li.textContent = `${item.app}: ${item.password}`;
+        li.innerHTML += `<button onclick="deletePassword(${index})">Delete</button>`;
         passwordsList.appendChild(li);
     });
 }
 
-// Function to load saved events
+function addPassword() {
+    const app = document.getElementById('password-app').value.trim();
+    const password = document.getElementById('password-input').value.trim();
+    if (app && password) {
+        const userData = getUserData();
+        userData.passwords.push({ app, password });
+        saveUserData(userData);
+        loadSavedPasswords();
+        document.getElementById('password-app').value = '';
+        document.getElementById('password-input').value = '';
+    }
+}
+
+function deletePassword(index) {
+    const userData = getUserData();
+    userData.passwords.splice(index, 1);
+    saveUserData(userData);
+    loadSavedPasswords();
+}
+
+// Events Management
 function loadSavedEvents() {
-    const events = JSON.parse(localStorage.getItem('savedEvents')) || [];
+    const userData = getUserData();
+    const events = userData.events || [];
     const eventsList = document.getElementById('events-list');
     eventsList.innerHTML = '';
     events.forEach((event, index) => {
         const li = document.createElement('li');
-        li.textContent = `${event.name} on ${event.date}`;
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.onclick = function() {
-            deleteEvent(index);
-        };
-        li.appendChild(deleteButton);
+        li.textContent = `${event.date}: ${event.name}`;
+        li.innerHTML += `<button onclick="deleteEvent(${index})">Delete</button>`;
         eventsList.appendChild(li);
     });
 }
 
-// Function to add a link
-function addLink() {
-    const linkInput = document.getElementById('link-input');
-    const newLink = linkInput.value.trim();
-    if (newLink) {
-        let savedLinks = JSON.parse(localStorage.getItem('savedLinks')) || [];
-        savedLinks.push(newLink);
-        localStorage.setItem('savedLinks', JSON.stringify(savedLinks));
-        loadSavedLinks(); // Refresh the list
-        linkInput.value = ''; // Clear the input
-    }
-}
-
-// Function to add a password
-function addPassword() {
-    const appInput = document.getElementById('password-app');
-    const passwordInput = document.getElementById('password-input');
-    const appName = appInput.value.trim();
-    const password = passwordInput.value.trim();
-
-    if (appName && password) {
-        let savedPasswords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
-        savedPasswords.push({ app: appName, password: password });
-        localStorage.setItem('savedPasswords', JSON.stringify(savedPasswords));
-        loadSavedPasswords(); // Refresh the list
-        appInput.value = ''; // Clear the input
-        passwordInput.value = ''; // Clear the input
-    }
-}
-
-// Function to add an event
 function addEvent() {
-    const eventInput = document.getElementById('event-input');
-    const eventDate = document.getElementById('event-date');
-    const newEvent = eventInput.value.trim();
-    const newDate = eventDate.value;
-
-    if (newEvent && newDate) {
-        let savedEvents = JSON.parse(localStorage.getItem('savedEvents')) || [];
-        savedEvents.push({ name: newEvent, date: newDate });
-        localStorage.setItem('savedEvents', JSON.stringify(savedEvents));
-        loadSavedEvents(); // Refresh the list
-        eventInput.value = ''; // Clear the input
-        eventDate.value = ''; // Clear the date
+    const eventInput = document.getElementById('event-input').value.trim();
+    const eventDate = document.getElementById('event-date').value.trim();
+    if (eventInput && eventDate) {
+        const userData = getUserData();
+        userData.events.push({ name: eventInput, date: eventDate });
+        saveUserData(userData);
+        loadSavedEvents();
+        document.getElementById('event-input').value = '';
+        document.getElementById('event-date').value = '';
     }
 }
 
-// Function to delete a link
-function deleteLink(index) {
-    let savedLinks = JSON.parse(localStorage.getItem('savedLinks')) || [];
-    savedLinks.splice(index, 1);
-    localStorage.setItem('savedLinks', JSON.stringify(savedLinks));
-    loadSavedLinks(); // Refresh the list
-}
-
-// Function to delete a password
-function deletePassword(index) {
-    let savedPasswords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
-    savedPasswords.splice(index, 1);
-    localStorage.setItem('savedPasswords', JSON.stringify(savedPasswords));
-    loadSavedPasswords(); // Refresh the list
-}
-
-// Function to delete an event
 function deleteEvent(index) {
-    let savedEvents = JSON.parse(localStorage.getItem('savedEvents')) || [];
-    savedEvents.splice(index, 1);
-    localStorage.setItem('savedEvents', JSON.stringify(savedEvents));
-    loadSavedEvents(); // Refresh the list
+    const userData = getUserData();
+    userData.events.splice(index, 1);
+    saveUserData(userData);
+    loadSavedEvents();
 }
 </script>
 
